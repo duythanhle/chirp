@@ -2,6 +2,17 @@ defmodule ChirpWeb.PostLive.FormComponent do
   use ChirpWeb, :live_component
 
   alias Chirp.Timeline
+  alias Chirp.Timeline.Post
+  require Logger
+
+  @impl true
+  def mount(socket) do
+    {:ok,
+    socket
+    |> assign(:uploaded_files, [])
+    |> allow_upload(:photo, accept: ~w(.jpg .jpeg .png), max_entries: 2)}
+    # {:ok, allow_upload(socket, :photo, accept: ~w(.png .jpeg .jpg), max_entries: 2)}
+  end
 
   @impl true
   def update(%{post: post} = assigns, socket) do
@@ -27,8 +38,13 @@ defmodule ChirpWeb.PostLive.FormComponent do
     save_post(socket, socket.assigns.action, post_params)
   end
 
+  def handle_event("cancel-entry", %{"ref" => ref}, socket) do
+    {:noreply, cancel_upload(socket, :photo, ref)}
+  end
+
   defp save_post(socket, :edit, post_params) do
-    case Timeline.update_post(socket.assigns.post, post_params) do
+    post = put_photo_urls(socket, %Post{})
+    case Timeline.update_post(post, post_params, &consume_photos(socket, &1)) do
       {:ok, _post} ->
         {:noreply,
          socket
@@ -41,7 +57,8 @@ defmodule ChirpWeb.PostLive.FormComponent do
   end
 
   defp save_post(socket, :new, post_params) do
-    case Timeline.create_post(post_params) do
+    post = put_photo_urls(socket, %Post{})
+    case Timeline.create_post(post, post_params, &consume_photos(socket, &1)) do
       {:ok, _post} ->
         {:noreply,
          socket
@@ -52,4 +69,27 @@ defmodule ChirpWeb.PostLive.FormComponent do
         {:noreply, assign(socket, changeset: changeset)}
     end
   end
+
+  def ext(entry) do
+    [ext | _] = MIME.extensions(entry.client_type)
+    ext
+  end
+
+  defp put_photo_urls(socket, %Post{} = post) do
+    {completed, []} = uploaded_entries(socket, :photo)
+    urls =
+      for entry <- completed do
+        Routes.static_path(socket, "/uploads/#{entry.uuid}.#{ext(entry)}")
+      end
+    %Post{post | photo_urls: urls}
+  end
+
+  def consume_photos(socket, %Post{} = post) do
+    consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
+      dest = Path.join([:code.priv_dir(:chirp), "static/uploads", "#{entry.uuid}.#{ext(entry)}"])
+      File.cp!(path, dest)
+    end)
+    {:ok, post}
+  end
+
 end

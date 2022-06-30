@@ -57,7 +57,7 @@ config :chirp, ChirpWeb.Endpoint,
 config :chirp, ChirpWeb.Endpoint,
   live_reload: [
     patterns: [
-      ~r"priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$",
+      ~r"priv/static/(?!uploads).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
       ~r"lib/chirp_web/(live|views)/.*(ex)$",
       ~r"lib/chirp_web/templates/.*(eex)$"
