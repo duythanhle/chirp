@@ -9,7 +9,6 @@ defmodule ChirpWeb.PostLive.FormComponent do
   def mount(socket) do
     {:ok,
     socket
-    |> assign(:uploaded_files, [])
     |> allow_upload(:photo, accept: ~w(.jpg .jpeg .png), max_entries: 2)}
     # {:ok, allow_upload(socket, :photo, accept: ~w(.png .jpeg .jpg), max_entries: 2)}
   end
@@ -43,8 +42,16 @@ defmodule ChirpWeb.PostLive.FormComponent do
   end
 
   defp save_post(socket, :edit, post_params) do
-    post = put_photo_urls(socket, %Post{})
-    case Timeline.update_post(post, post_params, &consume_photos(socket, &1)) do
+    uploaded_files =
+      consume_uploaded_entries(socket, :photo, fn %{path: path}, _entry ->
+        dest = Path.join([:code.priv_dir(:chirp), "static", "uploads", Path.basename(path)])
+        # The `static/uploads` directory must exist for `File.cp!/2` to work.
+        File.cp!(path, dest)
+
+        {:ok, Routes.static_path(socket, "/uploads/#{Path.basename(dest)}")}
+      end)
+    # post = put_photo_urls(socket, %Post{})
+    case Timeline.update_post(%Post{socket.assigns.post | photo_urls: uploaded_files}, post_params) do
       {:ok, _post} ->
         {:noreply,
          socket
@@ -57,8 +64,17 @@ defmodule ChirpWeb.PostLive.FormComponent do
   end
 
   defp save_post(socket, :new, post_params) do
-    post = put_photo_urls(socket, %Post{})
-    case Timeline.create_post(post, post_params, &consume_photos(socket, &1)) do
+    uploaded_files =
+      consume_uploaded_entries(socket, :photo, fn %{path: path}, _entry ->
+        dest = Path.join([:code.priv_dir(:chirp), "static", "uploads", Path.basename(path)])
+        # The `static/uploads` directory must exist for `File.cp!/2` to work.
+        File.cp!(path, dest)
+
+        {:ok, Routes.static_path(socket, "/uploads/#{Path.basename(dest)}")}
+      end)
+
+    # post = put_photo_urls(socket, %Post{})
+    case Timeline.create_post(%Post{photo_urls: uploaded_files}, post_params) do
       {:ok, _post} ->
         {:noreply,
          socket
