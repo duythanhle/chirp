@@ -1,4 +1,4 @@
-# Chirp
+# Real-time Twitter clone
 
 To start your Phoenix server:
 
