@@ -91,14 +91,14 @@ defmodule ChirpWeb.PostLive.FormComponent do
     ext
   end
 
-  defp put_photo_urls(socket, %Post{} = post) do
-    {completed, []} = uploaded_entries(socket, :photo)
-    urls =
-      for entry <- completed do
-        Routes.static_path(socket, "/uploads/#{entry.uuid}.#{ext(entry)}")
-      end
-    %Post{post | photo_urls: urls}
-  end
+  # defp put_photo_urls(socket, %Post{} = post) do
+  #   {completed, []} = uploaded_entries(socket, :photo)
+  #   urls =
+  #     for entry <- completed do
+  #       Routes.static_path(socket, "/uploads/#{entry.uuid}.#{ext(entry)}")
+  #     end
+  #   %Post{post | photo_urls: urls}
+  # end
 
   def consume_photos(socket, %Post{} = post) do
     consume_uploaded_entries(socket, :photo, fn %{path: path}, entry ->
